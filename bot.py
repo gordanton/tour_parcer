@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+from html import escape
 
 import telebot
 from telebot import types
@@ -27,10 +28,13 @@ def build_promo_text(promotions, offset):
         f"<i>Страница {page}</i>\n\n"
     )
     for idx, (_, title, link, source) in enumerate(promotions, offset + 1):
+        safe_title = escape(title)
+        safe_link = escape(link, quote=True)
+        safe_source = escape(source)
         response += (
-            f"{idx}. <b>{title}</b>\n"
-            f"🔗 <a href='{link}'>Подробнее</a>\n"
-            f"🏷️ Источник: {source}\n\n"
+            f"{idx}. <b>{safe_title}</b>\n"
+            f"🔗 <a href=\"{safe_link}\">Подробнее</a>\n"
+            f"🏷️ Источник: {safe_source}\n\n"
         )
     return response
 
