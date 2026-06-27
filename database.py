@@ -48,16 +48,16 @@ def save_promotions(promotions_list):
     return len(promotions_list)
 
 
-def get_promotions(limit=10):
-    """Возвращает последние limit предложений."""
+def get_promotions(limit=10, offset=0):
+    """Возвращает список предложений с пагинацией."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, title, link, source
-        FROM promotions
-        ORDER BY created_at DESC
-        LIMIT ?
-    """, (limit,))
+        SELECT id, title, link, source 
+        FROM promotions 
+        ORDER BY created_at DESC 
+        LIMIT ? OFFSET ?
+    """, (limit, offset))
     results = cursor.fetchall()
     conn.close()
     return results

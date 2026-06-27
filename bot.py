@@ -14,8 +14,85 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+PAGE_SIZE = 10
+
 bot = telebot.TeleBot(BOT_TOKEN)
 init_db()
+
+
+def build_promo_text(promotions, offset):
+    page = offset // PAGE_SIZE + 1
+    response = (
+        "🔥 <b>Горящие туристические предложения</b> 🔥\n\n"
+        f"<i>Страница {page}</i>\n\n"
+    )
+    for idx, (_, title, link, source) in enumerate(promotions, offset + 1):
+        response += (
+            f"{idx}. <b>{title}</b>\n"
+            f"🔗 <a href='{link}'>Подробнее</a>\n"
+            f"🏷️ Источник: {source}\n\n"
+        )
+    return response
+
+
+def build_promo_keyboard(offset, has_prev, has_next):
+    markup = types.InlineKeyboardMarkup()
+    buttons = []
+    if has_prev:
+        buttons.append(
+            types.InlineKeyboardButton(
+                "◀️ Назад",
+                callback_data=f"promo:{offset - PAGE_SIZE}",
+            )
+        )
+    if has_next:
+        buttons.append(
+            types.InlineKeyboardButton(
+                "▶️ Вперёд",
+                callback_data=f"promo:{offset + PAGE_SIZE}",
+            )
+        )
+    if buttons:
+        markup.row(*buttons)
+    return markup
+
+
+def send_promo_page(chat_id, offset=0, message_id=None):
+    promotions = get_promotions(PAGE_SIZE + 1, offset)
+    has_next = len(promotions) > PAGE_SIZE
+    promotions = promotions[:PAGE_SIZE]
+
+    if not promotions:
+        empty_text = (
+            "⏳ В базе пока нет предложений. "
+            "Попробуйте позже или запросите обновление у администратора."
+        )
+        if message_id:
+            bot.edit_message_text(empty_text, chat_id, message_id)
+        else:
+            bot.send_message(chat_id, empty_text)
+        return
+
+    text = build_promo_text(promotions, offset)
+    markup = build_promo_keyboard(offset, offset > 0, has_next)
+
+    if message_id:
+        bot.edit_message_text(
+            text,
+            chat_id,
+            message_id,
+            parse_mode='HTML',
+            disable_web_page_preview=True,
+            reply_markup=markup,
+        )
+    else:
+        bot.send_message(
+            chat_id,
+            text,
+            parse_mode='HTML',
+            disable_web_page_preview=True,
+            reply_markup=markup,
+        )
 
 
 @bot.message_handler(commands=['start'])
@@ -56,7 +133,7 @@ def send_help(message):
 ℹ️ <b>Помощь по боту</b>
 
 <b>Основные команды:</b>
-/promo - Показать 10 горящих предложений
+/promo - Показать горящие предложения (с листанием страниц)
 /update - Обновить базу предложений (только для админа)
 /stats - Статистика (только для админа)
 
@@ -68,32 +145,27 @@ def send_help(message):
 @bot.message_handler(commands=['promo'])
 def send_promotions(message):
     try:
-        promotions = get_promotions(10)
-        if not promotions:
-            bot.send_message(
-                message.chat.id,
-                "⏳ В базе пока нет предложений. "
-                "Попробуйте позже или запросите обновление у администратора.",
-            )
-            return
-
-        response = "🔥 <b>Горящие туристические предложения</b> 🔥\n\n"
-        for idx, (_, title, link, source) in enumerate(promotions, 1):
-            response += (
-                f"{idx}. <b>{title}</b>\n"
-                f"🔗 <a href='{link}'>Подробнее</a>\n"
-                f"🏷️ Источник: {source}\n\n"
-            )
-
-        bot.send_message(
-            message.chat.id,
-            response,
-            parse_mode='HTML',
-            disable_web_page_preview=True,
-        )
+        send_promo_page(message.chat.id)
     except Exception as exc:
         logger.error("Ошибка отправки предложений: %s", exc)
         bot.send_message(message.chat.id, "⚠️ Произошла ошибка. Попробуйте позже.")
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('promo:'))
+def handle_promo_pagination(call):
+    try:
+        offset = int(call.data.split(':', 1)[1])
+        if offset < 0:
+            offset = 0
+        send_promo_page(call.message.chat.id, offset, call.message.message_id)
+        bot.answer_callback_query(call.id)
+    except Exception as exc:
+        logger.error("Ошибка пагинации предложений: %s", exc)
+        bot.answer_callback_query(
+            call.id,
+            "⚠️ Не удалось загрузить страницу.",
+            show_alert=True,
+        )
 
 
 @bot.message_handler(commands=['update'])
