@@ -1,115 +1,143 @@
-# Telegram Travel Promotions Bot
+🧳 Travel Promotions Bot
+Telegram-бот для автоматического сбора горящих туристических предложений и акций с сайтов ведущих туроператоров. Бот парсит страницы акций, сохраняет предложения в базу данных и выдаёт их пользователям по запросу с удобной пагинацией и инлайн-кнопками.
 
-Telegram-бот для автоматического сбора горящих туристических предложений и акций от ведущих туроператоров.
+✨ Возможности
+Сбор предложений с сайтов:
 
-## Что делает проект
+Coral Travel
 
-Бот парсит официальные сайты туроператоров, извлекает заголовки и ссылки на акции, сохраняет их в SQLite и отправляет пользователю по команде `/promo`.
+Anex Tour
 
-**Источники данных:**
+Sunmar
 
-- Coral Travel
-- Anex Tour
-- Sunmar
-- Библио-Глобус
-- PEGAS Touristik
-- FUN&SUN
+Библио‑Глобус
 
-## Стек
+PEGAS Touristik
 
-- Python 3.7+
-- pyTelegramBotAPI (telebot)
-- SQLite
-- BeautifulSoup4
-- requests
+FUN&SUN (бывший TUI)
 
-## Установка
+Пагинация – список разбит на страницы по 10 предложений, листайте вперёд/назад с помощью кнопок под сообщением.
 
-1. Клонируйте проект и перейдите в папку:
+Административные команды:
 
-```bash
-cd бот
-```
+/update – принудительно обновить базу (парсинг всех источников)
 
-2. Установите зависимости:
+/stats – статистика: общее количество предложений и пользователей
 
-```bash
+Автоматическое сохранение в SQLite – данные всегда свежие после обновления.
+
+Логирование – все действия бота записываются для отладки.
+
+🛠 Технологический стек
+Python 3.8+
+
+pyTelegramBotAPI – взаимодействие с Telegram Bot API
+
+BeautifulSoup4 + requests – парсинг HTML-страниц
+
+SQLite3 – локальное хранение данных
+
+python-dotenv – безопасное управление переменными окружения
+
+🚀 Установка и запуск
+1. Клонируйте репозиторий
+bash
+git clone https://github.com/gordanton/tour_parcer.git
+cd tour_parcer
+2. Создайте и активируйте виртуальное окружение
+bash
+python3 -m venv venv
+source venv/bin/activate   # для Linux/Mac
+# или venv\Scripts\activate для Windows
+3. Установите зависимости
+bash
 pip install -r requirements.txt
-```
+4. Настройте переменные окружения
+Создайте файл .env в корне проекта со следующим содержимым:
 
-3. Создайте файл `.env` на основе примера:
-
-```bash
-copy .env.example .env
-```
-
-4. Заполните `.env`:
-
-```env
+env
 BOT_TOKEN=ваш_токен_от_BotFather
-ADMIN_ID=ваш_telegram_id
+ADMIN_ID=ваш_телеграм_id_числом
 DB_NAME=travel_promotions.db
-```
+Токен получите у @BotFather
 
-`ADMIN_ID` можно узнать у [@userinfobot](https://t.me/userinfobot).
+Свой ID узнайте у @userinfobot
 
-## Запуск
-
-Проверка парсеров без Telegram:
-
-```bash
-python test_parsers.py
-```
-
-Запуск бота:
-
-```bash
+5. Запустите бота
+bash
 python bot.py
-```
+При первом запуске автоматически создадутся таблицы в базе данных.
 
-## Команды бота
+📱 Команды бота
+Команда	Описание
+/start	Приветственное сообщение и главное меню
+/promo	Вывести первые 10 горящих предложений с кнопками пагинации
+/help	Справка по командам
+/update	Обновить базу данных (только для администратора)
+/stats	Показать статистику (только для администратора)
+После выполнения /promo под сообщением появляются кнопки ◀️ Назад и Вперед ▶️ для перелистывания.
 
-| Команда | Описание |
-|---------|----------|
-| `/start` | Приветствие и регистрация |
-| `/promo` | До 10 горящих предложений из базы |
-| `/help` | Справка |
-| `/update` | Обновить базу (только админ) |
-| `/stats` | Статистика (только админ) |
+🐧 Деплой на сервер (Timeweb / VPS)
+1. Установите Python и Git
+bash
+sudo apt update && sudo apt install python3 python3-pip python3-venv git -y
+2. Клонируйте репозиторий и настройте окружение
+bash
+cd /root
+git clone https://github.com/gordanton/tour_parcer.git tour_parcer_bot
+cd tour_parcer_bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+3. Создайте файл .env с секретами
+bash
+nano .env
+# вставьте свои BOT_TOKEN, ADMIN_ID, DB_NAME
+4. Настройте systemd-сервис для автозапуска
+Создайте файл /etc/systemd/system/tour_parcer_bot.service:
 
-После первого запуска выполните `/update` от имени администратора, чтобы заполнить базу.
+ini
+[Unit]
+Description=Travel Promotions Bot
+After=network.target
 
-## Структура проекта
+[Service]
+User=root
+WorkingDirectory=/root/tour_parcer_bot
+ExecStart=/root/tour_parcer_bot/venv/bin/python /root/tour_parcer_bot/bot.py
+Restart=always
+RestartSec=10
 
-```
-бот/
-├── bot.py              # Telegram-бот
-├── parser.py           # Парсеры сайтов
-├── database.py         # Работа с SQLite
-├── config.py           # Настройки из .env
-├── test_parsers.py     # Проверка парсинга
-├── requirements.txt
-├── .env.example
-└── README.md
-```
+[Install]
+WantedBy=multi-user.target
+Затем:
 
-## Особенности парсинга
+bash
+systemctl daemon-reload
+systemctl enable tour_parcer_bot.service
+systemctl start tour_parcer_bot.service
+5. Проверьте статус
+bash
+systemctl status tour_parcer_bot.service
+journalctl -u tour_parcer_bot.service -f
+📁 Структура проекта
+text
+tour_parcer/
+├── bot.py              # Основной код бота, обработчики команд и пагинация
+├── config.py           # Загрузка переменных из .env
+├── database.py         # Работа с SQLite (инициализация, сохранение, чтение)
+├── parser.py           # Парсеры сайтов (универсальная функция + специфичные)
+├── requirements.txt    # Список зависимостей
+├── .env                # Конфиденциальные настройки (не попадает в Git)
+├── .env.example        # Пример файла .env
+└── README.md           # Этот файл
+🤝 Как внести вклад
+Форкните репозиторий.
 
-| Сайт | Метод |
-|------|-------|
-| Coral, Sunmar | `window._promotion_settings` в HTML |
-| Библио-Глобус | Ссылки на акции с главной страницы |
-| PEGAS | Карточки `.news-item` на `/news` |
-| FUN&SUN | Карточки `.elementor-post` на `/akczii/` |
-| Anex Tour | Резервные методы; сайт частично грузит акции через JS |
+Создайте ветку с новым функционалом.
 
-Если какой-то сайт перестал отдавать данные, обновите селекторы в `parser.py`.
+Внесите изменения и отправьте Pull Request.
 
-## Дальнейшие улучшения
+Сообщайте об ошибках через Issues.
 
-- Добавить других туроператоров
-- Автообновление базы по расписанию
-- Подписка на уведомления о новых акциях
-- Фильтр по стране или туроператору
-
-Проект предназначен для образовательных целей. Уважайте `robots.txt` и условия использования сайтов.
+Этот проект предназначен для образовательных целей. Используйте его ответственно и уважайте robots.txt и условия использования парсируемых сайтов.
